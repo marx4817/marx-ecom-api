@@ -12,7 +12,7 @@ export function isAuthenticated (req, res, next) {
         }
         token = token.split(" ")[1];
         const decoded = jwt.verify(token, process.env.ACCESS_SECRET);
-        req.user = decoded.user_id;
+        req.user = {userId: decoded.user_id, email: decoded.email}
         next();
     } catch (error) {
         return res.status(401).json({ success: false, msg: error.message });

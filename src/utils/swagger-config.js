@@ -20,7 +20,7 @@ const options = {
             },
         ],
     },
-    apis: ['./routes/*.js'], // Specify the paths to your Express route files
+    apis: ['src/routes/*.js'], // Specify the paths to your Express route files
 };
 
 const specs = swaggerJSDoc(options);

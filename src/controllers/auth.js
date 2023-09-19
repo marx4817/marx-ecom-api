@@ -3,9 +3,11 @@ import {
     checkUserExist,
     verifyUser
 } from "../queries/user.js";
+import { createProfil } from "../queries/profil.js";
+import { verifyRefreshToken } from "../utils/utils.js";
+
 import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
-import { verifyRefreshToken } from "../utils/utils.js";
 
 dotenv.config()
 
@@ -26,7 +28,10 @@ export const registerUser = async (req, res, next) =>{
 
     const user = await createUser({email, password, role});
 
-    const accessToken = jwt.sign({ user_id: user.id }, process.env.ACCESS_SECRET, {
+    const profil = await createProfil({user_id: user.id})
+    console.log(profil)
+
+    const accessToken = jwt.sign({ user_id: user.id, email: user.email }, process.env.ACCESS_SECRET, {
         expiresIn: `${process.env.ACCESS_EXPIRED_TIME}s`,
     });
 
@@ -34,11 +39,11 @@ export const registerUser = async (req, res, next) =>{
     expiresIn: `${process.env.REFRESH_EXPIRED_TIME}s`,
     });
     
-    res.status(201).json({user:{
-        user_id: user.id,
+    res.status(201).json({
+        user,
         access_token: accessToken,
         refresh_token: refreshToken
-    }}) 
+    }) 
 }
 
 export const loginUser = async (req, res, next) =>{
@@ -54,19 +59,19 @@ export const loginUser = async (req, res, next) =>{
         return res.status(400).json({error: 'email or password is incorrect'});
     }
 
-    const accessToken = jwt.sign({ user_id: user.id }, process.env.ACCESS_SECRET, {
+    const accessToken = jwt.sign({ user_id: user.id, email: user.email }, process.env.ACCESS_SECRET, {
         expiresIn: `${process.env.ACCESS_EXPIRED_TIME}s`,
     });
 
-    const refreshToken = jwt.sign({ user_id: user.id }, process.env.REFRESH_SECRET, {
+    const refreshToken = jwt.sign({ user_id: user.id}, process.env.REFRESH_SECRET, {
     expiresIn: `${process.env.REFRESH_EXPIRED_TIME}s`,
     });
     
-    res.status(200).json({user:{
-        user_id: user.id,
+    res.status(200).json({
+        user,
         access_token: accessToken,
         refresh_token: refreshToken
-    }}) 
+    }) 
 }
 
 export const refreshToken = (req, res, next) => {
@@ -84,4 +89,38 @@ export const refreshToken = (req, res, next) => {
     })
 
     return res.status(200).json({ success: true, access_token });
+}
+
+export const verifyEmail = async (req, res, next) =>{
+    const {email} = req.body;
+    
+    if(!email){
+        return res
+        .status(400)
+        .json({error: "email is required"})
+    }
+
+    const emailExist = await checkUserExist({email})
+    
+    return res
+    .status(200)
+    .json({email_exists: emailExist})
+}
+
+export const verifyPassword = async (req, res, next) =>{
+    const {email} = req.user;
+    const {password} = req.body;
+
+    if(!password){
+        return res
+        .status(400)
+        .json({error: "password is required"});
+    };
+
+    const isValid = await verifyUser({email, password});
+    const password_valid = isValid !== null;
+
+    return res
+    .status(200)
+    .json({password_valid})
 }

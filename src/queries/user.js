@@ -15,7 +15,7 @@ export const createUser = async (data) =>{
         const client = new pg.Client(dbConfig);
         await client.connect();
         const res = await client.query(
-            `INSERT INTO users(id, email, password, role) values($1, $2, $3, $4) RETURNING id`,
+            `INSERT INTO users(id, email, password, role) values($1, $2, $3, $4) RETURNING id, email, role, last_login`,
             [uniqueId, email, hashPswd, role]
         );
 
@@ -55,13 +55,34 @@ export const verifyUser = async (data) => {
         );
         const user = res.rows[0];
         client.end();
+
         if(!user) return null;
 
-        const userValid = bcrypt.compare(password, user.password);
-        if(userValid){
-            return user;
-        };
+        const userValid = await bcrypt.compare(password, user.password);
+        if(!userValid) return null;
+        
+        return user;
     }catch(err){
         console.log(err);
     }
 }
+
+export const getUserById = async (data) => {
+    const {id} = data;
+    
+    try{
+        const client = new pg.Client(dbConfig);
+        await client.connect();
+        const res = await client.query(
+            `SELECT * FROM users WHERE id=$1`,
+            [id]
+        );
+
+        const payload = res.rows[0];
+        await client.end();
+        return payload;
+    }catch(err){
+        console.log(err);
+    }
+}
+
